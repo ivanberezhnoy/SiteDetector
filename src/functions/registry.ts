@@ -4,6 +4,7 @@ import { SelectorNotFoundError } from '../errors.ts';
 import { delay, pathOf, safeCount } from '../utils/utils.ts';
 
 export type BumpFn = (page: Page, site: BumpSite, url: string) => Promise<number>;
+export type BumpFunction = (site: BumpSite, page: any, selector: string, index: number) => Promise<number>;
 
 // ---- helpers ----
 /**
@@ -42,7 +43,7 @@ async function waitAfterClickAndCount(
   const currentPath = pathOf(page.url());
   const expectedPath = pathOf(expectedUrl);
   let restored = false;
-  if (currentPath !== expectedPath) 
+  if (expectedPath !== "" && currentPath !== expectedPath) 
   {
     await page
       .goto(expectedUrl, { waitUntil: 'domcontentloaded', timeout: navTimeout })
@@ -68,9 +69,21 @@ async function waitAfterClickAndCount(
   return { count: cnt, restored };
 }
 
-async function clickNth(page: any, selector: string, index: number) 
+async function clickNth(site: BumpSite, page: any, selector: string, index: number) 
 {
 	try {
+	  if (site.bumpFunction)
+      {
+	      const fn = registry[site.bumpFunction];
+	      if (!fn) 
+	      {
+	        throw new Error(`bumpFunction '${site.function}' not found in registry`);
+	      }
+
+	      return await fn(site, page, selector, index);
+  	  }
+  	  else
+  	  {
 	  return await page.$$eval(
 	    selector,
 	    (els, i) => {
@@ -82,6 +95,7 @@ async function clickNth(page: any, selector: string, index: number)
 	    },
 	    index
 	  );
+	  }
 	} catch (e: any) {
 	  const msg = String(e?.message || e);
 	  if (/Execution context was destroyed|Cannot find context|Target closed/i.test(msg)) {
@@ -94,14 +108,14 @@ async function clickNth(page: any, selector: string, index: number)
 
 // ---- main ----
 export const registry: Record<string, BumpFn> = {
-  bumpHouse24: async (page, site, url) => {
+  bumpProcess: async (page, site, url) => {
     const selector =
       site.bumpSelector ??
       'a[onclick*="UpdateModifiedDate"], button.bump, a.bump';
 
 	const currentPath = pathOf(page.url());
 	const expectedPath = pathOf(url);
-	if (currentPath !== expectedPath) {
+	if (expectedPath !== "" && currentPath !== expectedPath) {
 	  await page.goto(url, { waitUntil: 'domcontentloaded' }).catch(() => {});
 	}
 
@@ -122,7 +136,7 @@ export const registry: Record<string, BumpFn> = {
 
 	  const cur = pathOf(page.url());
 	  const exp = pathOf(url);
-		if (cur !== exp) {
+		if (exp !== "" && cur !== exp) {
 		  await page.goto(url, { waitUntil: 'domcontentloaded' }).catch(() => {});
 		  const curCount = await safeCount(page, selector);
 		  if (curCount === 0) break;
@@ -139,7 +153,7 @@ export const registry: Record<string, BumpFn> = {
       if (idx >= prevCount) break; // дошли до конца текущего списка
 
       try {
-        const ok = await clickNth(page, selector, idx);
+        const ok = await clickNth(site, page, selector, idx);
         if (!ok) {
           // элемент по индексу не нашли — сдвигаемся дальше
           idx++;
@@ -170,8 +184,6 @@ export const registry: Record<string, BumpFn> = {
 		  idx++;
 		}
 
-		console.log(`PrevCount=${prevCount} new Count=${newCount} idx=${idx}`);
-
 		// зажимаем индекс в пределах нового количества
 		if (idx >= newCount) break;
 
@@ -186,4 +198,78 @@ export const registry: Record<string, BumpFn> = {
 
     return clicked;
   },
+
+bumpFunction: async (site, page, selector, index) => {
+  // 1) клик по ссылке и получение id селекта
+  const labelId = await page.$$eval(
+    selector,
+    (els, i) => {
+      const a = els[i] as HTMLAnchorElement | undefined;
+      if (!a) return null;
+
+      // вытащим id из data-toggle или класса
+      const dt = a.getAttribute('data-toggle') || '';
+      let m = dt.match(/#label_(\d+)/);
+      let id = m?.[1];
+      if (!id) {
+        m = (a.className || '').match(/current_label_(\d+)/);
+        if (m) id = m[1];
+      }
+      if (!id) return null;
+
+      // кликнуть надёжно, даже если display:none (некоторые либы слушают именно события)
+      a.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+      return `label_${id}`;
+    },
+    index
+  );
+
+  if (!labelId) {
+    console.warn('bumpFunction: label id not found for index', index);
+    return false;
+  }
+
+  const sel = `#${labelId.replace(/([ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, '\\$1')}`;
+
+  // 2) ждём появления/инициализации селекта
+  await page.waitForSelector(sel, { visible: true, timeout: 2000 }).catch(() => {});
+
+  // 3) выбрать по видимому тексту (регистронезависимо) и сгенерировать change
+  const pickByText = async (text: string) => {
+    return page.$eval(
+      sel,
+      (select, txt) => {
+        const s = select as HTMLSelectElement;
+        const t = String(txt).trim().toLowerCase();
+        let found = false;
+        for (const o of Array.from(s.options)) {
+          const label = (o.textContent || '').trim().toLowerCase();
+          if (label === t) {
+            s.value = o.value ?? '';
+            s.dispatchEvent(new Event('change', { bubbles: true }));
+            found = true;
+            break;
+          }
+        }
+        return found;
+      },
+      text
+    ).catch(() => false);
+  };
+
+  // 4) сначала "нет", затем "Свободно"
+  await pickByText('нет');
+  await delay(80);
+  await pickByText('Свободно');
+
+  if (site.bumpSleepSec)
+  {
+  	await delay(site.bumpSleepSec * 1000);
+  }
+
+  return true;
+}
+
+
 };

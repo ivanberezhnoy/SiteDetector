@@ -22,7 +22,7 @@
       "type": "bump",
       "id": "House24",
       "disabled": false,
-      "periodSec": 120,
+      "periodSec": 300,
       "login": {
         "url": "https://house24.com.ua/",
         "openSelector": "#login-button",
@@ -34,8 +34,29 @@
         "password": "Bi34#802"
       },
       "myAdsUrls": ["https://house24.com.ua/ru/account/objects", "https://house24.com.ua/ru/account/objects/page/2/"],
-      "function": "bumpHouse24",
+      "function": "bumpProcess",
       "bumpSelector": "a[onclick*='UpdateModifiedDate'][href='#']"
+    },
+
+    {
+      "type": "bump",
+      "id": "Doba",
+      "disabled": false,
+      "periodSec": 3600,
+      "login": {
+        "url": "https://doba.ua/ukr/personal/flatslist/",
+        "openClickNavigates": false,   
+      "usernameSelector": "input[name=\"USER_LOGIN\"]",
+      "passwordSelector": "input[name=\"USER_PASSWORD\"]",
+      "submitSelector": "input[type=\"submit\"]",
+        "username": "manager@hostel.kharkiv.ua",
+        "password": "Bi34#802"
+      },
+      "myAdsUrls": ["https://doba.ua/personal/flatslist/", "selector:a[data-page=\"2\"]"],
+      "bumpFunction": "bumpFunction",
+      "bumpSelector": "a[class^=\"current_label_\"][data-toggle^=\".current_label_\"][data-toggle*=\"#label_\"]",
+      "bumpSleepSec": 1,
+      "function": "bumpProcess"
     }
   ]
 }

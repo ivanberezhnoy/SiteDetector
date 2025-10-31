@@ -33,6 +33,8 @@ login: LoginConfig;
 myAdsUrls?: string[];
 function: string; // имя функции из реестра
 bumpSelector?: string; 
+bumpFunction?: string;
+bumpSleepSec?: number;
 };
 
 

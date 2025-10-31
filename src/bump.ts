@@ -3,7 +3,7 @@ import { newPage } from './utils/puppeteer.ts';
 import { registry } from './functions/registry.ts';
 import { SelectorNotFoundError } from './errors.ts';
 import { delay, log } from './utils/utils.ts';
-import { sendMessage } from './telegram.ts';
+import { sendSiteMessage } from './telegram.ts';
 // --- helpers ---------------------------------------------------------------
 
 async function waitVisible(
@@ -99,6 +99,15 @@ async function waitModalGone(
 
 // --- login flow ------------------------------------------------------------
 
+async function elementExists(page: Awaited<ReturnType<typeof newPage>>, selector?: string) {
+  if (!selector) return false;
+  try {
+    return !!(await page.$(selector));
+  } catch {
+    return false;
+  }
+}
+
 async function doLogin(
   page: Awaited<ReturnType<typeof newPage>>,
   login: LoginConfig,
@@ -106,23 +115,31 @@ async function doLogin(
 ) {
   await page.goto(login.url, { waitUntil: 'networkidle2' });
 
-  // 1) Открыть форму логина (модалка или переход)
+  // 0) Если нужна кнопка "Войти" — кликнем её, но не будем падать, если её нет (уже залогинен)
   if (login.openSelector) {
-    await clickOrThrow(page, login.openSelector, siteId, 'open', !!login.openClickNavigates);
-    // если это модалка — дождёмся формы
-    if (!login.openClickNavigates) {
-      // House24: модалка #box-signin
-      await waitVisible(page, '#box-signin', siteId, 'modal');
+    if (await elementExists(page, login.openSelector)) {
+      await clickOrThrow(page, login.openSelector, siteId, 'open', !!login.openClickNavigates);
+      if (!login.openClickNavigates) {
+        await waitVisible(page, '#box-signin', siteId, 'modal').catch(() => {});
+      }
+    } else {
+      log(`[${siteId}] openSelector not found — возможно, уже залогинен`);
     }
   }
 
-  // 2) Поля логина/пароля (Жёстко ждём появления)
+  // 1) Если поля логина/пароля отсутствуют — считаем, что уже авторизованы
+  const hasUser = await elementExists(page, login.usernameSelector);
+  const hasPass = await elementExists(page, login.passwordSelector);
+  if (!hasUser || !hasPass) {
+    log(`[${siteId}] no username/password fields — assume already logged in`);
+    return;
+  }
+
+  // 2) Вводим логин/пароль и сабмитим
   await waitAndType(page, login.usernameSelector, login.username, siteId, 'username');
   await waitAndType(page, login.passwordSelector, login.password, siteId, 'password');
 
-  
   if (login.submitSelector) {
-  
     await Promise.race([
       (async () => {
         await clickOrThrow(page, login.submitSelector!, siteId, 'submit', true);
@@ -131,19 +148,49 @@ async function doLogin(
       waitModalGone(page, '#box-signin').catch(() => null),
     ]);
   } else {
-    // Запасной вариант — Enter
-    log('Press enter')
+    log('Press enter');
     await Promise.race([
-      (async () => {
-        await page.keyboard.press('Enter');
-      })(),
+      (async () => { await page.keyboard.press('Enter'); })(),
       page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15_000 }).catch(() => null),
       waitModalGone(page, '#box-signin').catch(() => null),
     ]);
   }
 }
 
+
 // --- public API ------------------------------------------------------------
+
+function isSelectorUrl(u: string): boolean {
+  return u.startsWith('selector:');
+}
+
+async function clickSelectorAndWait(page: import('puppeteer').Page, selector: string) {
+  const css = selector.slice('selector:'.length).trim();
+  // ждём элемент и скроллим к нему
+  const el = await page.waitForSelector(css, { visible: true, timeout: 3_000 });
+  if (!el) throw new Error(`Selector not found: ${css}`);
+
+  await el.evaluate(e => {
+    try { e.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' }); } catch {}
+  });
+
+  const hrefBefore = page.url();
+
+  // кликаем и ждём возможную навигацию/загрузку
+  const navPromise = page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 3_000 }).catch(() => null);
+
+  await el.click({ delay: 50 });
+
+  const nav = await navPromise;
+
+  // если SPA и полноценной навигации не было — подождём смену URL или хоть какую-то сетевую тишину
+  if (!nav) {
+    await page.waitForFunction(prev => location.href !== prev, { timeout: 2_000 }, hrefBefore).catch(() => null);
+    // небольшой запас
+    await delay(1000);
+  }
+}
+
 
 export async function runBump(site: BumpSite): Promise<void> {
   const page = await newPage();
@@ -151,27 +198,36 @@ export async function runBump(site: BumpSite): Promise<void> {
   try {
     await doLogin(page, site.login, site.id);
 
-    for (const myUrl of site.myAdsUrls)
-    {
+    for (const myUrl of site.myAdsUrls) {
       await delay(2000);
-      await page.goto(myUrl, { waitUntil: 'networkidle2' });
-      
+
+      let passUrl = myUrl;
+
+      if (isSelectorUrl(myUrl)) 
+      {
+        await clickSelectorAndWait(page, myUrl);
+        passUrl = ""; // в fn пойдёт пустой url, как ты и хотел
+      } else {
+        await page.goto(myUrl, { waitUntil: 'networkidle2' });
+      }
 
       const fn = registry[site.function];
       if (!fn) {
         throw new Error(`Function '${site.function}' not found in registry`);
       }
-      clicked = clicked + await fn(page, site, myUrl);
+
+      // передаём пустую строку, если это был переход по селектору
+      clicked = clicked + await fn(page, site, passUrl);
     }
 
-    await delay(1200);
+    await delay(800);
   
     if (clicked > 0) 
     {
-      await sendMessage(`🔁 ${site.id}: обновлено ${clicked} объявлений.`);
+      await sendSiteMessage(site.id, "bump", `🔁 ${site.id}: обновлено ${clicked} объявлений.`);
     } else 
     {
-      await sendMessage(`⚠️ ${site.id}: ни одной кнопки не удалось нажать.`);
+      await sendSiteMessage(site.id, "bump", `⚠️ ${site.id}: ни одной кнопки не удалось нажать.`);
     }
 
   } 
