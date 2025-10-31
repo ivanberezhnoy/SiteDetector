@@ -71,18 +71,15 @@ function schedule(site: Site, myPhones: Set<string>) {
         // восстановление после ошибок селекторов
         if (state.notified[KEY_SEL]) {
           clearMark(KEY_SEL);
-          await ssendSiteMessage(site.id, "init", `✅ Селекторы снова работают на '${site.id}'.`);
+          await sendSiteMessage(site.id, "init", `✅ Селекторы снова работают на '${site.id}'.`);
         }
 
-        if (res.ok) {
-          if (state.notified[KEY_POS]) {
-            clearMark(KEY_POS);
-            await sendSiteMessage(site.id, "init", `✅ Восстановлена позиция на '${site.id}'. Телефон: ${res.foundPhone ?? 'n/a'}`);
-          }
+        if (res.ok) 
+        {
+          await sendSiteMessage(site.id, "Check", `✅ Восстановлена позиция на '${site.id}'. Телефон: ${res.foundPhone ?? 'n/a'}`);
+
         } else {
-          if (markOnce(KEY_POS)) {
-            await sendSiteMessage(site.id, "init", `⚠️ Позиция потеряна на '${site.id}'. Найден телефон: ${res.foundPhone ?? '—'}`);
-          }
+          await sendSiteMessage(site.id, "Check", `⚠️ Позиция потеряна на '${site.id}'. Найден телефон: ${res.foundPhone ?? '—'}`);
         }
       } else {
         await runBump(site);

@@ -91,3 +91,26 @@ export async function safeCount(page: any, selector: string, attempts = 3): Prom
   // последняя попытка
   return await page.$$eval(selector, els => els.length).catch(() => 0);
 }
+
+// utils/phone.ts
+/**
+ * Приводит телефон к «цифровому» виду:
+ *  - убирает все нецифровые символы
+ *  - удаляет ведущие 00 / 380 / 80, если нужно
+ *  - возвращает строку из цифр
+ */
+export function normalizePhone(raw: string | undefined | null): string {
+  if (!raw) return "";
+
+  // убираем пробелы, скобки, дефисы, плюсы и всё нецифровое
+  let digits = raw.replace(/\D+/g, "");
+
+  // если начинается с 00 (международный формат) → убираем 00
+  if (digits.startsWith("00")) digits = digits.slice(2);
+
+  // украинские кейсы: 380ХХ... или 80ХХ...
+  if (digits.startsWith("380")) digits = digits.slice(2); // → остаётся 0ХХ...
+  else if (digits.startsWith("80")) digits = "0" + digits.slice(2);
+
+  return digits;
+}

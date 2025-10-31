@@ -6,6 +6,7 @@ periodSec: number;
 listUrl: string;
 adLinkSelector: string; // CSS selector для входа в первое объявление
 phoneSelector: string; // CSS селектор телефона внутри карточки объявления
+showPhoneSelector?: string;
 myAdsUrls?: string | string[];
 adClick?: { navigate?: boolean; waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2' };
 };

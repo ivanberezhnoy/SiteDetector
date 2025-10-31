@@ -6,6 +6,8 @@
     "House24:selector": true,
     "config:load": true,
     "Doba:error": true,
-    "Doba:selector": true
+    "Doba:selector": true,
+    "Ukraine-Apartments:selector": false,
+    "Ukraine-Apartments:error": true
   }
 }
