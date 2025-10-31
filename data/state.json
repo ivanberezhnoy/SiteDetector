@@ -1,0 +1,8 @@
+{
+  "notified": {
+    "example-bump-site:error": true,
+    "example-bump-site:selector": true,
+    "House24:error": true,
+    "House24:selector": true
+  }
+}

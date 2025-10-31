@@ -1,0 +1,41 @@
+{
+  "phones": [
+    "+380501112233",
+    "+380671112233",
+    "380501112233"
+  ],
+  "sites": [
+    {
+      "disabled": true,
+      "type": "monitor",
+      "id": "example-list-site",
+      "periodSec": 300,
+      "listUrl": "https://example.com/ads",
+      "adLinkSelector": ".ad-card a.title",
+      "phoneSelector": ".phone-number",
+      "adClick": {
+        "navigate": true,
+        "waitUntil": "networkidle2"
+      }
+    },
+    {
+      "type": "bump",
+      "id": "House24",
+      "disabled": false,
+      "periodSec": 120,
+      "login": {
+        "url": "https://house24.com.ua/",
+        "openSelector": "#login-button",
+        "openClickNavigates": false,   
+	    "usernameSelector": "#box-signin form[name=\"form-signin\"] input[name=\"login\"]",
+	    "passwordSelector": "#box-signin form[name=\"form-signin\"] input[name=\"pwd\"]",
+	    "submitSelector": "#box-signin form[name=\"form-signin\"] input[type=\"button\"][value=\"Войти\"]",
+        "username": "CentralApartments",
+        "password": "Bi34#802"
+      },
+      "myAdsUrls": ["https://house24.com.ua/ru/account/objects", "https://house24.com.ua/ru/account/objects/page/2/"],
+      "function": "bumpHouse24",
+      "bumpSelector": "a[onclick*='UpdateModifiedDate'][href='#']"
+    }
+  ]
+}
