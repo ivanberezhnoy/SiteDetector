@@ -21,9 +21,9 @@ async function waitAfterClickAndCount(
   expectedUrl: string,
   {
     navTimeout = 1200,
-    minPause = 120,
+    minPause = 800,
     settleTimeout = 1500,
-    pollInterval = 60,
+    pollInterval = 160,
   } = {}
 ): Promise<{ count: number; restored: boolean }> {
   // 1) ждём либо смену URL (без домена), либо короткую паузу
@@ -36,7 +36,7 @@ async function waitAfterClickAndCount(
         beforePath
       )
       .catch(() => null),
-    delay(minPause),
+    await delay(minPause),
   ]);
 
   // 2) если "сбило" на другой путь — быстро вернёмся на нужный
@@ -167,7 +167,7 @@ export const registry: Record<string, BumpFn> = {
 		  selector,
 		  prevCount,
 		  url,
-		  { navTimeout: 1200, minPause: 600, settleTimeout: 2000, pollInterval: 200 }
+		  { navTimeout: 1200, minPause: 2000, settleTimeout: 2000, pollInterval: 200 }
 		);
 
 		if (newCount <= 0) {

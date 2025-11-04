@@ -1,6 +1,7 @@
 {
   "phones": [
-    "1049060"
+    "1049060",
+    "0481769"
   ],
   "sites": [
     {
@@ -18,10 +19,38 @@
       }
     },
     {
+      "disabled": false,
+      "type": "monitor",
+      "id": "Premier",
+      "periodSec": 600,
+      "listUrl": "https://premier.ua/ua/zhilaia-nedvizhimost/arenda-zhilia/posutochno",
+      "phoneSelector": "div.adv-item:first-of-type .adv-item-right-side",
+      "adClick": {
+        "navigate": true,
+        "waitUntil": "networkidle2"
+      }
+    },    
+
+    {
+      "disabled": false,
+      "type": "monitor",
+      "id": "DIM.RIA",
+      "periodSec": 600,
+      "listUrl": "https://dom.ria.com/uk/search/?excludeSold=1&category=1&realty_type=2&operation=4&state_id=7&price_cur=1&sort=inspected_sort&firstIteraction=false&city_ids=7&limit=20&market=3&type=list&client=searchV2&ch=246_244",
+      "adLinkSelector": "a.realty-link",
+      "showPhoneSelector": "button.phoneShowLink",
+      "phoneDialogSelectors": [".modal-mask.calls-modal", ".modal-container", "[role=\"dialog\"]"],
+      "phoneSelector": "__INITIAL_STATE__",
+      "adClick": {
+        "navigate": true,
+        "waitUntil": "networkidle2"
+      }
+    },  
+    {
       "type": "bump",
       "id": "House24",
       "disabled": false,
-      "periodSec": 300,
+      "periodSec": 1800,
       "login": {
         "url": "https://house24.com.ua/",
         "openSelector": "#login-button",

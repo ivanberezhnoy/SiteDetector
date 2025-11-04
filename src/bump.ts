@@ -113,6 +113,7 @@ async function doLogin(
   login: LoginConfig,
   siteId: string
 ) {
+  await delay(1000);
   await page.goto(login.url, { waitUntil: 'networkidle2' });
 
   // 0) Если нужна кнопка "Войти" — кликнем её, но не будем падать, если её нет (уже залогинен)
@@ -193,7 +194,7 @@ async function clickSelectorAndWait(page: import('puppeteer').Page, selector: st
 
 
 export async function runBump(site: BumpSite): Promise<void> {
-  const page = await newPage();
+  const page = await newPage(site.id);
   var clicked = 0;
   try {
     await doLogin(page, site.login, site.id);

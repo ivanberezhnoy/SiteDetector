@@ -33,7 +33,6 @@ function validateSite(site: Site): string | null {
   if (!site.periodSec || site.periodSec < 15) return 'invalid "periodSec" (<15)';
   if (site.type === 'monitor') {
     if (!site.listUrl) return 'missing "listUrl"';
-    if (!site.adLinkSelector) return 'missing "adLinkSelector"';
     if (!site.phoneSelector) return 'missing "phoneSelector"';
   } else {
     const l = site.login;

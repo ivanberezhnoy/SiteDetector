@@ -8,6 +8,9 @@
     "Doba:error": true,
     "Doba:selector": true,
     "Ukraine-Apartments:selector": false,
-    "Ukraine-Apartments:error": true
+    "Ukraine-Apartments:error": true,
+    "Premier:selector": false,
+    "DIM.RIA:selector": false,
+    "DIM.RIA:error": true
   }
 }
