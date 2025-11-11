@@ -54,6 +54,13 @@ export type SiteMessageOptions = SendMessageOptions & {
  * Отправляет сообщение, но только если оно отличается от последнего
  * для заданных (siteId, topic). Возвращает true, если отправлено.
  */
+const DUPLICATE_COOLDOWN_MS = 2 * 60 * 60 * 1000;
+
+type LastEntry = { text: string; sentAt: number };
+
+// backward-compatible: раньше тут могли лежать строки
+const lastByKey = new Map<string, LastEntry | string>();
+
 export async function sendSiteMessage(
   siteId: string,
   topic: string | undefined | null,
@@ -67,16 +74,24 @@ export async function sendSiteMessage(
   const k = keyOf(siteId, topic);
   const normalized = normalizeText(text);
 
-  if (!force && lastByKey.get(k) === normalized) {
-    // дубль — не шлём
-    return false;
+  // ---- анти-дубликаты с окном в 2 часа ----
+  if (!force) {
+    const entry = lastByKey.get(k);
+    if (entry) {
+      const lastText = typeof entry === "string" ? entry : entry.text;
+      const lastSentAt = typeof entry === "string" ? Date.now() : entry.sentAt; // для старого формата считаем «сейчас»
+      const isDuplicate = lastText === normalized;
+      const withinCooldown = Date.now() - lastSentAt < DUPLICATE_COOLDOWN_MS;
+
+      if (isDuplicate && withinCooldown) {
+        // дубликат слишком рано — не шлём
+        return false;
+      }
+    }
   }
 
   const headerText = header
-    ? [
-        siteId ? `[${siteId}]` : "",
-        (topic ?? "").trim() ? String(topic).trim() : "",
-      ]
+    ? [siteId ? `[${siteId}]` : "", (topic ?? "").trim() ? String(topic).trim() : ""]
         .filter(Boolean)
         .join(" ")
     : "";
@@ -88,7 +103,8 @@ export async function sendSiteMessage(
     ...tgOpts,
   });
 
-  lastByKey.set(k, normalized);
+  // фиксируем текст и время отправки
+  lastByKey.set(k, { text: normalized, sentAt: Date.now() });
   return true;
 }
 

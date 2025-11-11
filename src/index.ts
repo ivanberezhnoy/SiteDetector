@@ -78,7 +78,7 @@ function schedule(site: Site, myPhones: Set<string>) {
           await sendSiteMessage(site.id, "Check", `✅ Восстановлена позиция на '${site.id}'. Телефон: ${res.foundPhone ?? 'n/a'}`);
 
         } else {
-          await sendSiteMessage(site.id, "Check", `⚠️ Позиция потеряна на '${site.id}'. Найден телефон: ${res.foundPhone ?? '—'}`);
+          await sendSiteMessage(site.id, "Check", `⚠️ Позиция потеряна на '${site.id}'.`);
         }
       } else {
         await runBump(site);

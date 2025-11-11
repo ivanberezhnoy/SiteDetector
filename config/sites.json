@@ -70,7 +70,7 @@
       "type": "bump",
       "id": "Doba",
       "disabled": false,
-      "periodSec": 600,
+      "periodSec": 3600,
       "login": {
         "url": "https://doba.ua/ukr/personal/flatslist/",
         "openClickNavigates": false,   
