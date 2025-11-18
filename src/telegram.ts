@@ -2,6 +2,14 @@
 import TelegramBot, { SendMessageOptions } from "node-telegram-bot-api";
 import "dotenv/config";
 
+
+export enum MessageType {
+  Info = "Info",
+  Alert = "Alert",
+  Error = "Error",
+  Unknown = "Unknown",
+}
+
 const token = process.env.TELEGRAM_TOKEN;
 const chatId = process.env.TELEGRAM_CHAT_ID;
 
@@ -58,14 +66,12 @@ const DUPLICATE_COOLDOWN_MS = 2 * 60 * 60 * 1000;
 
 type LastEntry = { text: string; sentAt: number };
 
-// backward-compatible: раньше тут могли лежать строки
-const lastByKey = new Map<string, LastEntry | string>();
-
 export async function sendSiteMessage(
   siteId: string,
   topic: string | undefined | null,
   text: string,
-  options?: SiteMessageOptions
+  options?: SiteMessageOptions,
+  messageType: MessageType = MessageType.Unknown
 ): Promise<boolean> {
   const b = getBot();
   if (!b || !chatId) return false;
@@ -83,7 +89,7 @@ export async function sendSiteMessage(
       const isDuplicate = lastText === normalized;
       const withinCooldown = Date.now() - lastSentAt < DUPLICATE_COOLDOWN_MS;
 
-      if (isDuplicate && withinCooldown) {
+      if (isDuplicate && (withinCooldown || messageType == MessageType.Info)) {
         // дубликат слишком рано — не шлём
         return false;
       }

@@ -1,4 +1,4 @@
-import { newPage } from './utils/puppeteer.ts';
+import { newPage, closeSite} from './utils/puppeteer.ts';
 import { SelectorNotFoundError } from './errors.ts';
 import { normalizePhone, humanClick, delay } from './utils/utils.ts';
 
@@ -70,7 +70,7 @@ export async function checkTopByPhone(
   },
   myPhones: Set<string>
 ): Promise<{ ok: boolean; foundPhone?: string }> {
-  const page = await newPage(site.id);
+  const page = await newPage(site.id, { freshProfile: site.refreshBrowserData });
   try {
     page.setDefaultTimeout(20_000);
 
@@ -202,7 +202,8 @@ export async function checkTopByPhone(
       : { ok: false, foundPhone: extracted[0] };
 
 
-  } finally {
+  } finally 
+  {
     await page.close().catch(() => {});
   }
 }

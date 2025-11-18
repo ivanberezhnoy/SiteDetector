@@ -11,6 +11,7 @@
     "Ukraine-Apartments:error": true,
     "Premier:selector": false,
     "DIM.RIA:selector": false,
-    "DIM.RIA:error": true
+    "DIM.RIA:error": true,
+    "Premier:error": true
   }
 }

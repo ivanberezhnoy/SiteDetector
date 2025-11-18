@@ -10,6 +10,7 @@ showPhoneSelector?: string;
 myAdsUrls?: string | string[];
 phoneDialogSelectors? string[];
 adClick?: { navigate?: boolean; waitUntil?: 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2' };
+refreshBrowserData?: bool;
 };
 
 
@@ -37,6 +38,7 @@ function: string; // имя функции из реестра
 bumpSelector?: string; 
 bumpFunction?: string;
 bumpSleepSec?: number;
+refreshBrowserData?: bool;
 };
 
 

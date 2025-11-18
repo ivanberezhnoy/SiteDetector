@@ -3,7 +3,7 @@ import { newPage } from './utils/puppeteer.ts';
 import { registry } from './functions/registry.ts';
 import { SelectorNotFoundError } from './errors.ts';
 import { delay, log } from './utils/utils.ts';
-import { sendSiteMessage } from './telegram.ts';
+import { sendSiteMessage, MessageType } from './telegram.ts';
 // --- helpers ---------------------------------------------------------------
 
 async function waitVisible(
@@ -225,10 +225,10 @@ export async function runBump(site: BumpSite): Promise<void> {
   
     if (clicked > 0) 
     {
-      await sendSiteMessage(site.id, "bump", `🔁 ${site.id}: обновлено ${clicked} объявлений.`);
+      await sendSiteMessage(site.id, "bump", `🔁 ${site.id}: обновлено ${clicked} объявлений.`, undefined, MessageType.Info);
     } else 
     {
-      await sendSiteMessage(site.id, "bump", `⚠️ ${site.id}: ни одной кнопки не удалось нажать.`);
+      await sendSiteMessage(site.id, "bump", `⚠️ ${site.id}: ни одной кнопки не удалось нажать.`, undefined, MessageType.Alert );
     }
 
   } 

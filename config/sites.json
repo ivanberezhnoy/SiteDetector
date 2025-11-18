@@ -41,6 +41,7 @@
       "showPhoneSelector": "button.phoneShowLink",
       "phoneDialogSelectors": [".modal-mask.calls-modal", ".modal-container", "[role=\"dialog\"]"],
       "phoneSelector": "__INITIAL_STATE__",
+      "refreshBrowserData": true,
       "adClick": {
         "navigate": true,
         "waitUntil": "networkidle2"

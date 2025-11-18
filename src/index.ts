@@ -3,7 +3,7 @@ import { phonesSet } from './utils/normalize.ts';
 import { checkTopByPhone } from './monitor.ts';
 import { runBump } from './bump.ts';
 import { loadState, saveState } from './storage.ts';
-import { sendSiteMessage } from './telegram.ts';
+import { sendSiteMessage, MessageType } from './telegram.ts';
 import { Site } from './types.ts';
 import { SelectorNotFoundError } from './errors.ts';
 
@@ -57,7 +57,7 @@ function schedule(site: Site, myPhones: Set<string>) {
       const bad = validateSite(site);
       if (bad) {
         if (markOnce(KEY_BAD)) {
-          await sendSiteMessage(site.id, "init", `⚠️ Проблемная конфигурация для сайта '${site.id}': ${bad}`);
+          await sendSiteMessage(site.id, "init", `⚠️ Проблемная конфигурация для сайта '${site.id}': ${bad}`, undefined, MessageType.Alert);
         }
         return; // не запускаем задачу до фикса
       } else {
@@ -70,15 +70,15 @@ function schedule(site: Site, myPhones: Set<string>) {
         // восстановление после ошибок селекторов
         if (state.notified[KEY_SEL]) {
           clearMark(KEY_SEL);
-          await sendSiteMessage(site.id, "init", `✅ Селекторы снова работают на '${site.id}'.`);
+          await sendSiteMessage(site.id, "init", `✅ Селекторы снова работают на '${site.id}'.`, undefined, MessageType.Info);
         }
 
         if (res.ok) 
         {
-          await sendSiteMessage(site.id, "Check", `✅ Восстановлена позиция на '${site.id}'. Телефон: ${res.foundPhone ?? 'n/a'}`);
+          await sendSiteMessage(site.id, "Check", `✅ Восстановлена позиция на '${site.id}'. Телефон: ${res.foundPhone ?? 'n/a'}`, undefined, MessageType.Info);
 
         } else {
-          await sendSiteMessage(site.id, "Check", `⚠️ Позиция потеряна на '${site.id}'.`);
+          await sendSiteMessage(site.id, "Check", `⚠️ Позиция потеряна на '${site.id}'.`, undefined, MessageType.Alert);
         }
       } else {
         await runBump(site);
@@ -89,7 +89,7 @@ function schedule(site: Site, myPhones: Set<string>) {
       if (e instanceof SelectorNotFoundError) {
         if (markOnce(KEY_SEL)) {
           await sendSiteMessage(site.id, "init",
-            `❌ Не удалось найти селектор на '${e.siteId}' (stage=${e.stage}): \`${e.selector}\`. Повторю позже.`
+            `❌ Не удалось найти селектор на '${e.siteId}' (stage=${e.stage}): \`${e.selector}\`. Повторю позже.`, undefined, MessageType.Alert
           );
         }
         return; // мягко выходим: setInterval запустит через period
@@ -98,7 +98,7 @@ function schedule(site: Site, myPhones: Set<string>) {
       // Остальные ошибки — единичное уведомление на запуск тикера
       const KEY_ERR = `${site.id}:error`;
       if (markOnce(KEY_ERR)) {
-        await sendSiteMessage(site.id, "init", `❌ Ошибка на '${site.id}': ${e?.message || e}`);
+        await sendSiteMessage(site.id, "init", `❌ Ошибка на '${site.id}': ${e?.message || e}`, undefined, MessageType.Alert);
       }
       // можно оставить лог в консоли
       console.error(`[${site.id}]`, e);
