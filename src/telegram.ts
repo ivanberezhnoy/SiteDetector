@@ -35,6 +35,9 @@ function keyOf(siteId: string, topic?: string | null) {
 // in-memory cache последних сообщений по (siteId, topic)
 const lastByKey = new Map<string, string>();
 
+// Храним message_id всех Info-сообщений по siteId
+const infoMessageIdsBySiteId = new Map<string, number[]>();
+
 // --- базовая отправка (обратная совместимость) ----------------------------
 /**
  * Отправляет сообщение в общий чат. Поведение как раньше.
@@ -80,39 +83,83 @@ export async function sendSiteMessage(
   const k = keyOf(siteId, topic);
   const normalized = normalizeText(text);
 
+  const isAlertOrError =
+    messageType === MessageType.Alert || messageType === MessageType.Error;
+
+  // --- если пришёл Alert / Error — удаляем все Info по этому siteId ---
+  if (isAlertOrError) {
+    const infoIds = infoMessageIdsBySiteId.get(siteId);
+    if (infoIds && infoIds.length > 0) {
+      // пробуем удалить все, но не падаем, если что-то уже нельзя удалить
+      await Promise.all(
+        infoIds.map((id) =>
+          b.deleteMessage(chatId, id).catch((err) => {
+            console.error(
+              `Failed to delete Info message for siteId=${siteId}, message_id=${id}`,
+              err
+            );
+          })
+        )
+      );
+      infoMessageIdsBySiteId.delete(siteId);
+    }
+  }
+
   // ---- анти-дубликаты с окном в 2 часа ----
   if (!force) {
     const entry = lastByKey.get(k);
     if (entry) {
       const lastText = typeof entry === "string" ? entry : entry.text;
-      const lastSentAt = typeof entry === "string" ? Date.now() : entry.sentAt; // для старого формата считаем «сейчас»
+      const lastSentAt =
+        typeof entry === "string" ? Date.now() : entry.sentAt; // для старого формата считаем «сейчас»
       const isDuplicate = lastText === normalized;
       const withinCooldown = Date.now() - lastSentAt < DUPLICATE_COOLDOWN_MS;
 
       if (isDuplicate && (withinCooldown || messageType == MessageType.Info)) {
-        // дубликат слишком рано — не шлём
+        // дубликат — не шлём
         return false;
       }
     }
   }
 
   const headerText = header
-    ? [siteId ? `[${siteId}]` : "", (topic ?? "").trim() ? String(topic).trim() : ""]
+    ? [
+        siteId ? `[${siteId}]` : "",
+        (topic ?? "").trim() ? String(topic).trim() : "",
+      ]
         .filter(Boolean)
         .join(" ")
     : "";
 
-  const display = [prefix ?? "", headerText, text].filter(Boolean).join(" ").trim();
+  const display = [prefix ?? "", headerText, text]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
 
-  await b.sendMessage(chatId, display, {
+  // sendMessage должен вернуть объект с message_id
+  const msg = await b.sendMessage(chatId, display, {
     disable_web_page_preview: true,
     ...tgOpts,
   });
 
-  // фиксируем текст и время отправки
+  // фиксируем текст и время отправки (старый/новый формат поддержан)
   lastByKey.set(k, { text: normalized, sentAt: Date.now() });
+
+  // если это Info — запоминаем message_id по siteId
+  if (
+    messageType === MessageType.Info &&
+    msg &&
+    typeof (msg as any).message_id === "number"
+  ) {
+    const id = (msg as any).message_id as number;
+    const list = infoMessageIdsBySiteId.get(siteId) ?? [];
+    list.push(id);
+    infoMessageIdsBySiteId.set(siteId, list);
+  }
+
   return true;
 }
+
 
 // --- reset utils -----------------------------------------------------------
 /** Сбросить кэш последнего сообщения для пары (siteId, topic) */
