@@ -64,7 +64,8 @@
       },
       "myAdsUrls": ["https://house24.com.ua/ru/account/objects", "https://house24.com.ua/ru/account/objects/page/2/"],
       "function": "bumpProcess",
-      "bumpSelector": "a[onclick*='UpdateModifiedDate'][href='#']"
+      "maxBumpCount": 0,
+      "bumpSelectors": ["a[onclick*='UpdateModifiedDate'][href='#']"]
     },
 
     {
@@ -83,7 +84,8 @@
       },
       "myAdsUrls": ["https://doba.ua/personal/flatslist/", "selector:a[data-page=\"2\"]"],
       "bumpFunction": "bumpFunction",
-      "bumpSelector": "a[class^=\"current_label_\"][data-toggle^=\".current_label_\"][data-toggle*=\"#label_\"]",
+      "bumpSelectors": ["a[class^=\"current_label_\"][data-toggle^=\".current_label_\"][data-toggle*=\"#label_\"]"],
+      "maxBumpCount": 0,
       "bumpSleepSec": 1,
       "function": "bumpProcess"
     }

@@ -196,6 +196,12 @@ async function clickSelectorAndWait(page: import('puppeteer').Page, selector: st
 export async function runBump(site: BumpSite): Promise<void> {
   const page = await newPage(site.id);
   var clicked = 0;
+
+  const maxTotal =
+    typeof site.maxBumpCount === 'number' && site.maxBumpCount > 0
+      ? site.maxBumpCount
+      : Infinity;
+
   try {
     await doLogin(page, site.login, site.id);
 
@@ -219,6 +225,8 @@ export async function runBump(site: BumpSite): Promise<void> {
 
       // передаём пустую строку, если это был переход по селектору
       clicked = clicked + await fn(page, site, passUrl);
+
+      if (clicked >= maxTotal) break;
     }
 
     await delay(800);

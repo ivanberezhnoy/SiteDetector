@@ -35,9 +35,10 @@ periodSec: number;
 login: LoginConfig;
 myAdsUrls?: string[];
 function: string; // имя функции из реестра
-bumpSelector?: string; 
+bumpSelectors?: string[]; 
 bumpFunction?: string;
 bumpSleepSec?: number;
+maxBumpCount?: number;
 refreshBrowserData?: bool;
 };
 
