@@ -42,17 +42,23 @@ const infoMessageIdsBySiteId = new Map<string, number[]>();
 /**
  * Отправляет сообщение в общий чат. Поведение как раньше.
  */
-export async function sendMessage(text: string, options?: SendMessageOptions) {
+type BaseMessageOptions = SendMessageOptions & { silent?: boolean };
+
+export async function sendMessage(text: string, options?: BaseMessageOptions) {
+  const { silent = false, ...tgOpts } = options ?? {};
+
+  if (silent) return;
+
   const b = getBot();
   if (!b || !chatId) return;
   await b.sendMessage(chatId, text, {
     disable_web_page_preview: true,
-    ...options,
+    ...tgOpts,
   });
 }
 
 // --- anti-spam по (siteId, topic) -----------------------------------------
-export type SiteMessageOptions = SendMessageOptions & {
+export type SiteMessageOptions = BaseMessageOptions & {
   /** Префикс, например эмодзи/теги, добавляется в начало */
   prefix?: string;
   /** Включать ли заголовок "[siteId] topic" перед текстом (по умолчанию true) */

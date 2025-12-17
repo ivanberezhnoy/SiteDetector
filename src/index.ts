@@ -54,6 +54,7 @@ function schedule(site: Site, myPhones: Set<string>) {
 
   const tick = async () => {
     const maxAttempts = 3;
+    const siteMessageOptions = site.silent ? { silent: true } : undefined;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
@@ -61,7 +62,13 @@ function schedule(site: Site, myPhones: Set<string>) {
         const bad = validateSite(site);
         if (bad) {
           if (markOnce(KEY_BAD)) {
-            await sendSiteMessage(site.id, "init", `⚠️ Проблемная конфигурация для сайта '${site.id}': ${bad}`, undefined, MessageType.Alert);
+            await sendSiteMessage(
+              site.id,
+              "init",
+              `⚠️ Проблемная конфигурация для сайта '${site.id}': ${bad}`,
+              siteMessageOptions,
+              MessageType.Alert
+            );
           }
           return; // не запускаем задачу до фикса
         } else {
@@ -74,15 +81,33 @@ function schedule(site: Site, myPhones: Set<string>) {
           // восстановление после ошибок селекторов
           if (state.notified[KEY_SEL]) {
             clearMark(KEY_SEL);
-            await sendSiteMessage(site.id, "init", `✅ Селекторы снова работают на '${site.id}'.`, undefined, MessageType.Info);
+            await sendSiteMessage(
+              site.id,
+              "init",
+              `✅ Селекторы снова работают на '${site.id}'.`,
+              siteMessageOptions,
+              MessageType.Info
+            );
           }
 
           if (res.ok)
           {
-            await sendSiteMessage(site.id, "Check", `✅ Восстановлена позиция на '${site.id}'. Телефон: ${res.foundPhone ?? 'n/a'}`, undefined, MessageType.Info);
+            await sendSiteMessage(
+              site.id,
+              "Check",
+              `✅ Восстановлена позиция на '${site.id}'. Телефон: ${res.foundPhone ?? 'n/a'}`,
+              siteMessageOptions,
+              MessageType.Info
+            );
 
           } else {
-            await sendSiteMessage(site.id, "Check", `⚠️ Позиция потеряна на '${site.id}'.`, undefined, MessageType.Alert);
+            await sendSiteMessage(
+              site.id,
+              "Check",
+              `⚠️ Позиция потеряна на '${site.id}'.`,
+              siteMessageOptions,
+              MessageType.Alert
+            );
           }
         } else {
           await runBump(site);
@@ -105,8 +130,12 @@ function schedule(site: Site, myPhones: Set<string>) {
         // Специальный кейс: не нашли селектор — закрываем вкладку и пробуем позже, не спамим
         if (isSelectorError) {
           if (markOnce(KEY_SEL)) {
-            await sendSiteMessage(site.id, "init",
-              `❌ Не удалось найти селектор на '${e.siteId}' (stage=${e.stage}): \`${e.selector}\`. Повторю позже.`, undefined, MessageType.Alert
+            await sendSiteMessage(
+              site.id,
+              "init",
+              `❌ Не удалось найти селектор на '${e.siteId}' (stage=${e.stage}): \`${e.selector}\`. Повторю позже.`,
+              siteMessageOptions,
+              MessageType.Alert
             );
           }
           return; // мягко выходим: setInterval запустит через period
@@ -115,7 +144,13 @@ function schedule(site: Site, myPhones: Set<string>) {
         // Остальные ошибки — единичное уведомление на запуск тикера
         const KEY_ERR = `${site.id}:error`;
         if (markOnce(KEY_ERR)) {
-          await sendSiteMessage(site.id, "init", `❌ Ошибка на '${site.id}': ${e?.message || e}`, undefined, MessageType.Alert);
+          await sendSiteMessage(
+            site.id,
+            "init",
+            `❌ Ошибка на '${site.id}': ${e?.message || e}`,
+            siteMessageOptions,
+            MessageType.Alert
+          );
         }
         // можно оставить лог в консоли
         console.error(`[${site.id}]`, e);

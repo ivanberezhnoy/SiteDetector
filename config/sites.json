@@ -33,6 +33,7 @@
 
     {
       "disabled": false,
+      "silent": true,
       "type": "monitor",
       "id": "DIM.RIA",
       "periodSec": 600,
@@ -51,6 +52,7 @@
       "type": "bump",
       "id": "House24",
       "disabled": false,
+      "silent": true,
       "periodSec": 1800,
       "login": {
         "url": "https://house24.com.ua/",
@@ -72,6 +74,7 @@
       "type": "bump",
       "id": "Doba",
       "disabled": false,
+      "silent": true,
       "periodSec": 3600,
       "login": {
         "url": "https://doba.ua/ukr/personal/flatslist/",
