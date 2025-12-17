@@ -3,9 +3,10 @@ import { phonesSet } from './utils/normalize.ts';
 import { checkTopByPhone } from './monitor.ts';
 import { runBump } from './bump.ts';
 import { loadState, saveState } from './storage.ts';
-import { sendSiteMessage, MessageType } from './telegram.ts';
+import { sendSiteMessage, MessageType, sendMessage } from './telegram.ts';
 import { Site } from './types.ts';
 import { SelectorNotFoundError } from './errors.ts';
+import { delay } from './utils/utils.ts';
 
 // anti-spam ключи
 const KEY_CFG_LOAD = 'config:load';
@@ -52,56 +53,74 @@ function schedule(site: Site, myPhones: Set<string>) {
   const KEY_BAD = `${site.id}:badcfg`;
 
   const tick = async () => {
-    try {
-      // валидируем конфиг сайта
-      const bad = validateSite(site);
-      if (bad) {
-        if (markOnce(KEY_BAD)) {
-          await sendSiteMessage(site.id, "init", `⚠️ Проблемная конфигурация для сайта '${site.id}': ${bad}`, undefined, MessageType.Alert);
-        }
-        return; // не запускаем задачу до фикса
-      } else {
-        clearMark(KEY_BAD);
-      }
+    const maxAttempts = 3;
 
-      if (site.type === 'monitor') {
-        const res = await checkTopByPhone(site, myPhones);
-
-        // восстановление после ошибок селекторов
-        if (state.notified[KEY_SEL]) {
-          clearMark(KEY_SEL);
-          await sendSiteMessage(site.id, "init", `✅ Селекторы снова работают на '${site.id}'.`, undefined, MessageType.Info);
-        }
-
-        if (res.ok) 
-        {
-          await sendSiteMessage(site.id, "Check", `✅ Восстановлена позиция на '${site.id}'. Телефон: ${res.foundPhone ?? 'n/a'}`, undefined, MessageType.Info);
-
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        // валидируем конфиг сайта
+        const bad = validateSite(site);
+        if (bad) {
+          if (markOnce(KEY_BAD)) {
+            await sendSiteMessage(site.id, "init", `⚠️ Проблемная конфигурация для сайта '${site.id}': ${bad}`, undefined, MessageType.Alert);
+          }
+          return; // не запускаем задачу до фикса
         } else {
-          await sendSiteMessage(site.id, "Check", `⚠️ Позиция потеряна на '${site.id}'.`, undefined, MessageType.Alert);
+          clearMark(KEY_BAD);
         }
-      } else {
-        await runBump(site);
-        // тут можно добавить отчёт о bump при необходимости
-      }
-    } catch (e: any) {
-      // Специальный кейс: не нашли селектор — закрываем вкладку и пробуем позже, не спамим
-      if (e instanceof SelectorNotFoundError) {
-        if (markOnce(KEY_SEL)) {
-          await sendSiteMessage(site.id, "init",
-            `❌ Не удалось найти селектор на '${e.siteId}' (stage=${e.stage}): \`${e.selector}\`. Повторю позже.`, undefined, MessageType.Alert
-          );
-        }
-        return; // мягко выходим: setInterval запустит через period
-      }
 
-      // Остальные ошибки — единичное уведомление на запуск тикера
-      const KEY_ERR = `${site.id}:error`;
-      if (markOnce(KEY_ERR)) {
-        await sendSiteMessage(site.id, "init", `❌ Ошибка на '${site.id}': ${e?.message || e}`, undefined, MessageType.Alert);
+        if (site.type === 'monitor') {
+          const res = await checkTopByPhone(site, myPhones);
+
+          // восстановление после ошибок селекторов
+          if (state.notified[KEY_SEL]) {
+            clearMark(KEY_SEL);
+            await sendSiteMessage(site.id, "init", `✅ Селекторы снова работают на '${site.id}'.`, undefined, MessageType.Info);
+          }
+
+          if (res.ok)
+          {
+            await sendSiteMessage(site.id, "Check", `✅ Восстановлена позиция на '${site.id}'. Телефон: ${res.foundPhone ?? 'n/a'}`, undefined, MessageType.Info);
+
+          } else {
+            await sendSiteMessage(site.id, "Check", `⚠️ Позиция потеряна на '${site.id}'.`, undefined, MessageType.Alert);
+          }
+        } else {
+          await runBump(site);
+          // тут можно добавить отчёт о bump при необходимости
+        }
+
+        return; // успешное выполнение — выходим
+      } catch (e: any) {
+        const isSelectorError = e instanceof SelectorNotFoundError;
+        const isLastAttempt = attempt === maxAttempts;
+
+        if (isSelectorError && !isLastAttempt) {
+          console.warn(
+            `[${site.id}] Selector not found (attempt ${attempt}/${maxAttempts}). Retrying...`
+          );
+          await delay(500);
+          continue;
+        }
+
+        // Специальный кейс: не нашли селектор — закрываем вкладку и пробуем позже, не спамим
+        if (isSelectorError) {
+          if (markOnce(KEY_SEL)) {
+            await sendSiteMessage(site.id, "init",
+              `❌ Не удалось найти селектор на '${e.siteId}' (stage=${e.stage}): \`${e.selector}\`. Повторю позже.`, undefined, MessageType.Alert
+            );
+          }
+          return; // мягко выходим: setInterval запустит через period
+        }
+
+        // Остальные ошибки — единичное уведомление на запуск тикера
+        const KEY_ERR = `${site.id}:error`;
+        if (markOnce(KEY_ERR)) {
+          await sendSiteMessage(site.id, "init", `❌ Ошибка на '${site.id}': ${e?.message || e}`, undefined, MessageType.Alert);
+        }
+        // можно оставить лог в консоли
+        console.error(`[${site.id}]`, e);
+        return;
       }
-      // можно оставить лог в консоли
-      console.error(`[${site.id}]`, e);
     }
   };
 

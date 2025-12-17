@@ -59,6 +59,8 @@ export type SiteMessageOptions = SendMessageOptions & {
   header?: boolean;
   /** Принудительно отправить, даже если дубликат (по умолчанию false) */
   force?: boolean;
+  /** Если true — сообщение не отправляется (используется для беззвучных уведомлений) */
+  silent?: boolean;
 };
 
 /**
@@ -76,10 +78,13 @@ export async function sendSiteMessage(
   options?: SiteMessageOptions,
   messageType: MessageType = MessageType.Unknown
 ): Promise<boolean> {
+  const { prefix, header = true, force = false, silent = false, ...tgOpts } = options ?? {};
+
+  if (silent) return false;
+
   const b = getBot();
   if (!b || !chatId) return false;
 
-  const { prefix, header = true, force = false, ...tgOpts } = options ?? {};
   const k = keyOf(siteId, topic);
   const normalized = normalizeText(text);
 
