@@ -1,15 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { AppConfig } from './types.ts';
+import { AppConfig, Site } from './types.ts';
 
 
 const ROOT = path.resolve(process.cwd());
 const CONFIG_PATH = path.join(ROOT, 'config', 'sites.json');
 
 
-function withDefaults(site: Site): Site 
+function withDefaults(site: Site): Site
 {
-	(site as any).disabled = site.disabled ?? false;
+        (site as any).disabled = site.disabled ?? false;
+        (site as any).silent = site.silent ?? false;
 
 	const urls = (site as any).myAdsUrls ?? [];
 	(site as any).myAdsUrls = Array.from(
