@@ -197,6 +197,8 @@ export async function runBump(site: BumpSite): Promise<void> {
   const page = await newPage(site.id);
   var clicked = 0;
 
+  const siteMessageOptions = site.silent ? { silent: true } : undefined;
+
   const maxTotal =
     typeof site.maxBumpCount === 'number' && site.maxBumpCount > 0
       ? site.maxBumpCount
@@ -237,7 +239,7 @@ export async function runBump(site: BumpSite): Promise<void> {
         site.id,
         "bump",
         `🔁 ${site.id}: обновлено ${clicked} объявлений.`,
-        { silent: true },
+        siteMessageOptions,
         MessageType.Info
       );
     } else
@@ -246,7 +248,7 @@ export async function runBump(site: BumpSite): Promise<void> {
         site.id,
         "bump",
         `⚠️ ${site.id}: ни одной кнопки не удалось нажать.`,
-        { silent: true },
+        siteMessageOptions,
         MessageType.Alert
       );
     }
