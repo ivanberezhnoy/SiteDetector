@@ -231,12 +231,24 @@ export async function runBump(site: BumpSite): Promise<void> {
 
     await delay(800);
   
-    if (clicked > 0) 
+    if (clicked > 0)
     {
-      await sendSiteMessage(site.id, "bump", `🔁 ${site.id}: обновлено ${clicked} объявлений.`, undefined, MessageType.Info);
-    } else 
+      await sendSiteMessage(
+        site.id,
+        "bump",
+        `🔁 ${site.id}: обновлено ${clicked} объявлений.`,
+        { silent: true },
+        MessageType.Info
+      );
+    } else
     {
-      await sendSiteMessage(site.id, "bump", `⚠️ ${site.id}: ни одной кнопки не удалось нажать.`, undefined, MessageType.Alert );
+      await sendSiteMessage(
+        site.id,
+        "bump",
+        `⚠️ ${site.id}: ни одной кнопки не удалось нажать.`,
+        { silent: true },
+        MessageType.Alert
+      );
     }
 
   } 
